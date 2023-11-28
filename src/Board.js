@@ -13,13 +13,52 @@ export default class Board extends React.Component {
         backlog: clients.filter(client => !client.status || client.status === 'backlog'),
         inProgress: clients.filter(client => client.status && client.status === 'in-progress'),
         complete: clients.filter(client => client.status && client.status === 'complete'),
-      }
-    }
+      },
+    };
     this.swimlanes = {
       backlog: React.createRef(),
       inProgress: React.createRef(),
       complete: React.createRef(),
-    }
+    };
+  }
+
+  componentDidMount() {
+    this.setupDragAndDrop();
+  }
+
+  setupDragAndDrop() {
+    const containers = Object.values(this.swimlanes).map(ref => ref.current);
+    Dragula(containers)
+      .on('drag', function (el) {
+        el.className = el.className.replace('ex-moved', '');
+      })
+      .on('drop', (el, target, source) => {
+        el.className += ' ex-moved';
+        const cardId = el.getAttribute('data-id');
+        const newStatus = target.parentElement.getAttribute('data-status');
+        this.updateCardStatus(cardId, newStatus);
+      })
+      .on('over', function (el, container) {
+        container.className += ' ex-over';
+      })
+      .on('out', function (el, container) {
+        container.className = container.className.replace('ex-over', '');
+      });
+  }
+
+  updateCardStatus(cardId, newStatus) {
+    this.setState(prevState => {
+      const clients = { ...prevState.clients };
+      Object.keys(clients).forEach(key => {
+        clients[key] = prevState.clients[key].filter(client => {
+          if (client.id === cardId) {
+            client.status = newStatus;
+          }
+          return client;
+        });
+      });
+      return { clients };
+    });
   }
   getClients() {
     return [
